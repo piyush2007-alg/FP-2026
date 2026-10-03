@@ -1,0 +1,12 @@
+{
+  "name": "poultry-farm-management-system",
+  "version": "1.0.0",
+  "description": "Poultry Farm Management System root setup",
+  "scripts": {
+    "install-all": "npm install --prefix frontend && npm install --prefix backend",
+    "dev": "npx concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}
