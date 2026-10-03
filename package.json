@@ -13,6 +13,7 @@
     "concurrently": "^10.0.5"
   },
   "dependencies": {
-    "render": "^0.1.4"
+    "render": "^0.1.4",
+    "vercel": "^62.2.0"
   }
 }
