@@ -1,4 +1,4 @@
-# 🐔 FlockPulse — Poultry Farm Management System (FP-2026)
+# 🐔 Kukoo — Poultry Farm Management System (FP-2026)
 
 [![Node.js](https://img.shields.io/badge/Node.js-v18+-green.svg?logo=node.js)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-19.x-61dafb.svg?logo=react)](https://react.dev/)
@@ -34,9 +34,9 @@
 
 ## 🌟 Overview
 
-**FlockPulse** (FP-2026) is a full-stack, real-time poultry farm governance and analytics platform. It eliminates fragmented manual registers and spreadsheets by consolidating flock telemetry, feed silo inventory, daily egg yield calculations, disease/biosecurity tracking, and automated vaccination scheduling into an intuitive, responsive dashboard.
+**Kukoo** (FP-2026) is a full-stack, real-time poultry farm governance and analytics platform. It eliminates fragmented manual registers and spreadsheets by consolidating flock telemetry, feed silo inventory, daily egg yield calculations, disease/biosecurity tracking, and automated vaccination scheduling into an intuitive, responsive dashboard.
 
-Built with support for **9 Indian regional languages** (English, Hindi, Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada, Punjabi) and real-time **Server-Sent Events (SSE)**, FlockPulse bridges the gap between field farm workers, veterinarians, and farm administrators.
+Built with support for **9 Indian regional languages** (English, Hindi, Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada, Punjabi) and real-time **Server-Sent Events (SSE)**, Kukoo bridges the gap between field farm workers, veterinarians, and farm administrators.
 
 ---
 
@@ -212,7 +212,7 @@ Poultry_Farm_Management_System/
 ```env
 PORT=5000
 NODE_ENV=development
-JWT_SECRET=flockpulse_enterprise_secret_2026
+JWT_SECRET=kukoo_enterprise_secret_2026
 
 # Optional: Google OAuth 2.0 Integration
 GOOGLE_CLIENT_ID=
@@ -235,9 +235,9 @@ Upon database initialization, the following pre-configured accounts are seeded:
 
 | Role | Username | Password | Email |
 |---|---|---|---|
-| **Admin** | `admin` | `admin123` | `admin@flockpulse.io` |
-| **Staff** | `staff` | `staff123` | `staff@flockpulse.io` |
-| **Veterinarian** | `vet` | `vet123` | `vet@flockpulse.io` |
+| **Admin** | `admin` | `admin123` | `admin@kukoo.app` |
+| **Staff** | `staff` | `staff123` | `staff@kukoo.app` |
+| **Veterinarian** | `vet` | `vet123` | `vet@kukoo.app` |
 
 ---
 
@@ -266,7 +266,7 @@ Upon database initialization, the following pre-configured accounts are seeded:
 
 ## 🌾 Field Visit & Research Grounding
 
-The features and workflows in **FlockPulse** are grounded in practical field research conducted at local poultry facilities (Bodhala farm):
+The features and workflows in **Kukoo** are grounded in practical field research conducted at local poultry facilities (Bodhala farm):
 - **Breed-Specific Production Dynamics**: Modeled yield variations across *Kadaknath*, *Desi*, and *Sonalika* breeds.
 - **Disease Prevention Schedules**: Standardized vaccination protocols including **LaSota** and **Gumboro** regimens.
 - **Dietary Calibration**: Ingestion monitoring tailored for grain rations (Wheat, Maize/Corn, Bajra/Pearl Millet) and commercial mash.
