@@ -1338,14 +1338,14 @@ function App() {
                 </button>
               </div>
 
-              {/* Active Backend Connection & Endpoint Configurator */}
+              {/* Active Backend Connection Status */}
               <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 p-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                     <span className="font-semibold">Backend:</span>
-                    <span className="font-mono text-[11px] text-slate-800 dark:text-slate-200 truncate max-w-[180px]">
-                      {API_BASE || '(Local Proxy)'}
+                    <span className="font-mono text-[11px] text-slate-800 dark:text-slate-200 truncate max-w-[200px]">
+                      {API_BASE ? API_BASE : 'Vercel Serverless (Active)'}
                     </span>
                   </div>
                   <button
@@ -1353,7 +1353,7 @@ function App() {
                     onClick={() => setShowEndpointConfig(!showEndpointConfig)}
                     className="text-[11px] font-bold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-0.5"
                   >
-                    <span>{showEndpointConfig ? 'Hide' : 'Change URL'}</span>
+                    <span>{showEndpointConfig ? 'Hide' : 'Settings'}</span>
                     <span className="material-symbols-outlined text-xs">tune</span>
                   </button>
                 </div>
@@ -1361,13 +1361,13 @@ function App() {
                 {showEndpointConfig && (
                   <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-2">
                     <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block">
-                      Custom Render Backend URL:
+                      Custom API Endpoint (Leave empty for Vercel Serverless):
                     </label>
                     <div className="flex gap-2">
                       <input
                         type="url"
                         className="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono text-slate-900 dark:text-white"
-                        placeholder="https://your-backend.onrender.com"
+                        placeholder="Leave empty for Vercel built-in"
                         value={endpointInput}
                         onChange={e => setEndpointInput(e.target.value)}
                       />
@@ -1392,10 +1392,10 @@ function App() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleSaveEndpoint('https://kukoo-2026.onrender.com')}
+                        onClick={() => handleSaveEndpoint('')}
                         className="text-[10px] text-slate-500 hover:underline"
                       >
-                        Reset Default
+                        Reset to Vercel Built-In
                       </button>
                     </div>
 
