@@ -3,9 +3,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const dbPath = path.resolve(__dirname, '../poultry.db');
+const isVercel = Boolean(process.env.VERCEL);
+const dbPath = isVercel
+  ? path.resolve('/tmp', 'poultry.db')
+  : path.resolve(__dirname, '../poultry.db');
 
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {

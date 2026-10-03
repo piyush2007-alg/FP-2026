@@ -196,16 +196,12 @@ function App() {
   const [apiBaseUrl, setApiBaseUrl] = useState(() => {
     return (
       localStorage.getItem('kukoo_api_url') ||
-      (import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '') : (
-        typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-          ? ''
-          : 'https://kukoo-2026.onrender.com'
-      ))
+      (import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '') : '')
     );
   });
   const [showEndpointConfig, setShowEndpointConfig] = useState(false);
   const [endpointInput, setEndpointInput] = useState(() => {
-    return localStorage.getItem('kukoo_api_url') || import.meta.env.VITE_API_BASE_URL || 'https://kukoo-2026.onrender.com';
+    return localStorage.getItem('kukoo_api_url') || import.meta.env.VITE_API_BASE_URL || '';
   });
   const [connectionTesting, setConnectionTesting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState(null);

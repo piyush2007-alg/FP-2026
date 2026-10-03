@@ -1222,7 +1222,12 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start Server
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`[Kukoo Enterprise Backend] running on port ${PORT}`);
-});
+// Start Server (Standalone / Render / Local)
+if (!process.env.VERCEL) {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[Kukoo Enterprise Backend] running on port ${PORT}`);
+  });
+}
+
+export default app;
+
