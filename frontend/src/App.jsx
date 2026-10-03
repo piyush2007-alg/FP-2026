@@ -199,13 +199,13 @@ function App() {
       (import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '') : (
         typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
           ? ''
-          : 'https://kukoo-backend.onrender.com'
+          : 'https://kukoo-2026.onrender.com'
       ))
     );
   });
   const [showEndpointConfig, setShowEndpointConfig] = useState(false);
   const [endpointInput, setEndpointInput] = useState(() => {
-    return localStorage.getItem('kukoo_api_url') || import.meta.env.VITE_API_BASE_URL || 'https://kukoo-backend.onrender.com';
+    return localStorage.getItem('kukoo_api_url') || import.meta.env.VITE_API_BASE_URL || 'https://kukoo-2026.onrender.com';
   });
   const [connectionTesting, setConnectionTesting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState(null);
@@ -270,7 +270,7 @@ function App() {
     if (!data) {
       if (res.status === 405) {
         throw new Error(
-          'HTTP 405 Method Not Allowed: Vercel static hosting received the API request. To fix this, add VITE_API_BASE_URL (your Render backend URL, e.g. https://kukoo-backend.onrender.com) to Vercel Environment Variables and redeploy.'
+          'HTTP 405 Method Not Allowed: Vercel static hosting received the API request. To fix this, add VITE_API_BASE_URL (your Render backend URL, e.g. https://kukoo-2026.onrender.com) to Vercel Environment Variables and redeploy.'
         );
       }
       if (!res.ok) {
@@ -279,7 +279,7 @@ function App() {
         );
       }
       throw new Error(
-        'Backend returned non-JSON response. Please verify that VITE_API_BASE_URL points directly to your backend URL (e.g. https://kukoo-backend.onrender.com).'
+        'Backend returned non-JSON response. Please verify that VITE_API_BASE_URL points directly to your backend URL (e.g. https://kukoo-2026.onrender.com).'
       );
     }
 
@@ -1396,7 +1396,7 @@ function App() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleSaveEndpoint('https://kukoo-backend.onrender.com')}
+                        onClick={() => handleSaveEndpoint('https://kukoo-2026.onrender.com')}
                         className="text-[10px] text-slate-500 hover:underline"
                       >
                         Reset Default

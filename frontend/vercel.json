@@ -5,7 +5,7 @@
   "rewrites": [
     {
       "source": "/api/:match*",
-      "destination": "https://kukoo-backend.onrender.com/api/:match*"
+      "destination": "https://kukoo-2026.onrender.com/api/:match*"
     },
     {
       "source": "/(.*)",

@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: kukoo-backend
+    name: kukoo-2026
     runtime: node
     plan: free
     buildCommand: npm install --build-from-source
