@@ -1,0 +1,11 @@
+<---Field Visit Report – Poultry Farm Management System--->
+
+As part of our academic project on the Poultry Farm Management System, our team conducted a field visit to a local poultry farm to understand its daily operations. 
+During the visit, we interacted with the farm owner and asked questions about poultry management, feeding practices, vaccination, egg production, and the challenges 
+faced in running the farm.The owner explained the different breeds of hens, including Kadaknath, Desi, and Sonalika. We learned that Kadaknath eggs are highly 
+nutritious and contain more than 120 types of vitamins and nutrients, making them popular for their health benefits. The Desi breed produces around 15–20 eggs per
+month, while Sonalika hens can produce up to 365 eggs per year under proper care. The farm maintains 250–300 birds and keeps records of egg production and vaccination.
+We also learned about the Lasota and Gumboro vaccines, which are administered according to the recommended vaccination schedule to protect the birds from diseases.
+The birds are mainly fed a balanced diet consisting of wheat, maize (corn), and bajra (pearl millet) to ensure healthy growth and better egg production.The owner also 
+discussed common challenges such as eye infections(bitwin) and disease management. This field visit provided us with valuable practical knowledge about poultry farming 
+and highlighted the importance of proper nutrition, vaccination, hygiene, and record management in maintaining a successful poultry farm.
