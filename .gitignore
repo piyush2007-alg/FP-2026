@@ -5,3 +5,5 @@ build/
 .DS_Store
 .oxlintrc.json
 *.log
+*.db
+*.sqlite
