@@ -68,7 +68,10 @@ export const initDb = async () => {
       if (!userCols.includes('email')) await run("ALTER TABLE users ADD COLUMN email TEXT");
       if (!userCols.includes('password_hash')) await run("ALTER TABLE users ADD COLUMN password_hash TEXT");
       if (!userCols.includes('role')) await run("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'Staff'");
-      if (!userCols.includes('created_at')) await run("ALTER TABLE users ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP");
+      if (!userCols.includes('created_at')) {
+        await run("ALTER TABLE users ADD COLUMN created_at DATETIME");
+        await run("UPDATE users SET created_at = datetime('now') WHERE created_at IS NULL");
+      }
 
       // Batches
       const batchCols = (await all("PRAGMA table_info(batches)")).map(c => c.name);
@@ -137,7 +140,7 @@ export const initDb = async () => {
         }
       }
     } catch (migErr) {
-      console.warn('[FlockPulse] Column migration warning:', migErr.message);
+      console.warn('[Kukoo] Column migration warning:', migErr.message);
     }
 
     // 2. Batches / Sheds Table
@@ -261,25 +264,25 @@ export const initDb = async () => {
 
     const existingAdmin = await get('SELECT id FROM users WHERE LOWER(name) = ?', ['admin']);
     if (!existingAdmin) {
-      await run('INSERT INTO users (name, email, role, password_hash) VALUES (?, ?, ?, ?)', ['admin', 'admin@flockpulse.io', 'Admin', adminHash]);
+      await run('INSERT INTO users (name, email, role, password_hash) VALUES (?, ?, ?, ?)', ['admin', 'admin@kukoo.app', 'Admin', adminHash]);
     } else {
-      await run('UPDATE users SET password_hash = ?, role = ?, email = COALESCE(email, ?) WHERE id = ?', [adminHash, 'Admin', 'admin@flockpulse.io', existingAdmin.id]);
+      await run('UPDATE users SET password_hash = ?, role = ?, email = COALESCE(email, ?) WHERE id = ?', [adminHash, 'Admin', 'admin@kukoo.app', existingAdmin.id]);
     }
 
     const existingStaff = await get('SELECT id FROM users WHERE LOWER(name) = ?', ['staff']);
     if (!existingStaff) {
-      await run('INSERT INTO users (name, email, role, password_hash) VALUES (?, ?, ?, ?)', ['staff', 'staff@flockpulse.io', 'Staff', staffHash]);
+      await run('INSERT INTO users (name, email, role, password_hash) VALUES (?, ?, ?, ?)', ['staff', 'staff@kukoo.app', 'Staff', staffHash]);
     } else {
-      await run('UPDATE users SET password_hash = ?, role = ?, email = COALESCE(email, ?) WHERE id = ?', [staffHash, 'Staff', 'staff@flockpulse.io', existingStaff.id]);
+      await run('UPDATE users SET password_hash = ?, role = ?, email = COALESCE(email, ?) WHERE id = ?', [staffHash, 'Staff', 'staff@kukoo.app', existingStaff.id]);
     }
 
     const existingVet = await get('SELECT id FROM users WHERE LOWER(name) = ?', ['vet']);
     if (!existingVet) {
-      await run('INSERT INTO users (name, email, role, password_hash) VALUES (?, ?, ?, ?)', ['vet', 'vet@flockpulse.io', 'Vet', vetHash]);
+      await run('INSERT INTO users (name, email, role, password_hash) VALUES (?, ?, ?, ?)', ['vet', 'vet@kukoo.app', 'Vet', vetHash]);
     } else {
-      await run('UPDATE users SET password_hash = ?, role = ?, email = COALESCE(email, ?) WHERE id = ?', [vetHash, 'Vet', 'vet@flockpulse.io', existingVet.id]);
+      await run('UPDATE users SET password_hash = ?, role = ?, email = COALESCE(email, ?) WHERE id = ?', [vetHash, 'Vet', 'vet@kukoo.app', existingVet.id]);
     }
-    console.log('[FlockPulse] Default users verified: admin/admin123, staff/staff123, vet/vet123.');
+    console.log('[Kukoo] Default users verified: admin/admin123, staff/staff123, vet/vet123.');
 
     // Check & Seed Batches if empty
     const batchRow = await get('SELECT COUNT(*) as count FROM batches');
@@ -293,7 +296,7 @@ export const initDb = async () => {
       await run('INSERT INTO batches (batch_name, shed_name, hen_count, breed, start_date, status) VALUES (?, ?, ?, ?, ?, ?)', [
         'Batch Gamma (Broiler C-1)', 'Shed 3', 800, 'Ross 308', '2026-07-20', 'Active'
       ]);
-      console.log('[FlockPulse] Starter production batches seeded.');
+      console.log('[Kukoo] Starter production batches seeded.');
     }
 
     // Check & Seed Feed Stock if empty
@@ -308,7 +311,7 @@ export const initDb = async () => {
       await run('INSERT INTO feed_stock (feed_type, quantity, unit, supplier, date_received) VALUES (?, ?, ?, ?, ?)', [
         'Broiler Finisher Pellet', 6.0, 'Tons', 'Apex Animal Nutrition Ltd', '2026-09-25'
       ]);
-      console.log('[FlockPulse] Starter feed stock inventory seeded.');
+      console.log('[Kukoo] Starter feed stock inventory seeded.');
     }
 
     // Check & Seed Feed Consumption if empty
@@ -320,7 +323,7 @@ export const initDb = async () => {
         await run('INSERT INTO feed_consumption (batch_id, feed_type, quantity_used, unit, date) VALUES (?, ?, ?, ?, ?)', [2, 'Maize & Grain Silo Mix', 0.17, 'Tons', d]);
         await run('INSERT INTO feed_consumption (batch_id, feed_type, quantity_used, unit, date) VALUES (?, ?, ?, ?, ?)', [3, 'Broiler Finisher Pellet', 0.09, 'Tons', d]);
       }
-      console.log('[FlockPulse] Starter feed consumption history seeded.');
+      console.log('[Kukoo] Starter feed consumption history seeded.');
     }
 
     // Check & Seed Egg Production if empty
@@ -344,7 +347,7 @@ export const initDb = async () => {
           2, h.date, h.b2, h.d2, h.b2 - h.d2
         ]);
       }
-      console.log('[FlockPulse] Starter egg production logs seeded.');
+      console.log('[Kukoo] Starter egg production logs seeded.');
     }
 
     // Check & Seed Vaccinations if empty
@@ -362,7 +365,7 @@ export const initDb = async () => {
       await run('INSERT INTO vaccinations (batch_id, vaccine_name, due_date, dosage, administered_date, administered_by, status) VALUES (?, ?, ?, ?, ?, ?, ?)', [
         1, 'Infectious Bronchitis (IB H120)', '2026-10-12', 'Coarse spray', null, null, 'upcoming'
       ]);
-      console.log('[FlockPulse] Starter vaccination schedules seeded.');
+      console.log('[Kukoo] Starter vaccination schedules seeded.');
     }
 
     // Check & Seed Health Records if empty
@@ -374,7 +377,7 @@ export const initDb = async () => {
       await run('INSERT INTO health_records (batch_id, date_observed, symptoms, diagnosed_disease, treatment_given, status) VALUES (?, ?, ?, ?, ?, ?)', [
         2, '2026-09-28', 'Reduced water intake during afternoon heat', 'Heat Fatigue', 'Electrolyte & Vitamin C supplementation in water tanks', 'Resolved'
       ]);
-      console.log('[FlockPulse] Starter flock health diagnostics seeded.');
+      console.log('[Kukoo] Starter flock health diagnostics seeded.');
     }
 
     // Check & Seed Tasks if empty
@@ -389,11 +392,11 @@ export const initDb = async () => {
       await run('INSERT INTO tasks (task_description, assigned_to, due_date, status, completed_by) VALUES (?, ?, ?, ?, ?)', [
         'Disinfect bio-security footbath at Shed 1 entrance', 'Staff', '2026-10-03', 'Completed', 'staff'
       ]);
-      console.log('[FlockPulse] Starter farm operational tasks seeded.');
+      console.log('[Kukoo] Starter farm operational tasks seeded.');
     }
 
-    console.log('[FlockPulse] Database initialization and schema verification complete.');
+    console.log('[Kukoo] Database initialization and schema verification complete.');
   } catch (err) {
-    console.error('[FlockPulse] Error during DB schema initialization:', err);
+    console.error('[Kukoo] Error during DB schema initialization:', err);
   }
 };

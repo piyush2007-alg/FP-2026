@@ -3,11 +3,13 @@ services:
     name: kukoo-backend
     runtime: node
     plan: free
-    buildCommand: npm install
+    buildCommand: npm install --build-from-source
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NODE_VERSION
+        value: 22.14.0
       - key: JWT_SECRET
         generateValue: true
       - key: PORT

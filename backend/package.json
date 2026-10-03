@@ -4,6 +4,9 @@
   "description": "Backend API for Poultry Farm Management System",
   "main": "src/server.js",
   "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js"

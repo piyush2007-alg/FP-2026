@@ -11,7 +11,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-const JWT_SECRET = process.env.JWT_SECRET || 'flockpulse_enterprise_secret_2026';
+const JWT_SECRET = process.env.JWT_SECRET || 'kukoo_enterprise_secret_2026';
 
 app.use(cors({
   origin: '*',
@@ -46,7 +46,7 @@ app.get('/api/events', (req, res) => {
   const client = { id: Date.now(), res };
   sseClients.add(client);
 
-  res.write(`event: connected\ndata: ${JSON.stringify({ message: 'FlockPulse SSE Stream Connected' })}\n\n`);
+  res.write(`event: connected\ndata: ${JSON.stringify({ message: 'Kukoo SSE Stream Connected' })}\n\n`);
 
   req.on('close', () => {
     sseClients.delete(client);
@@ -86,17 +86,17 @@ const requireRole = (roles) => {
 
 // Initialize DB schema & starter records
 initDb().then(() => {
-  console.log('[FlockPulse] Database initialized successfully.');
+  console.log('[Kukoo] Database initialized successfully.');
 }).catch(err => {
-  console.error('[FlockPulse] Database initialization failed:', err);
+  console.error('[Kukoo] Database initialization failed:', err);
 });
 
 // Public System Status / Ping Endpoints
 app.get('/api/ping', (req, res) => {
-  res.json({ status: 'ok', service: 'FlockPulse API Engine', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', service: 'Kukoo API Engine', timestamp: new Date().toISOString() });
 });
 app.get('/api/status', (req, res) => {
-  res.json({ status: 'ok', service: 'FlockPulse API Engine', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', service: 'Kukoo API Engine', timestamp: new Date().toISOString() });
 });
 
 // -------------------------------------------------------------
@@ -1202,6 +1202,6 @@ app.get('/api/web-search', async (req, res) => {
 });
 
 // Start Server
-app.listen(PORT, () => {
-  console.log(`[FlockPulse Enterprise Backend] running on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`[Kukoo Enterprise Backend] running on port ${PORT}`);
 });

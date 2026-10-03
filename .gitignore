@@ -7,3 +7,4 @@ build/
 *.log
 *.db
 *.sqlite
+*.sqlite3
