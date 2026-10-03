@@ -195,6 +195,10 @@ function App() {
   // -------------------------------------------------------------
   const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
+  const isMissingApiBaseInProd = useMemo(() => {
+    return !API_BASE && typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+  }, [API_BASE]);
+
   const handleLogout = useCallback(() => {
     setUser(null);
     setToken(null);
@@ -215,9 +219,14 @@ function App() {
     }
 
     if (!data) {
+      if (res.status === 405) {
+        throw new Error(
+          'HTTP 405 Method Not Allowed: Vercel static hosting received the API request. To fix this, add VITE_API_BASE_URL (your Render backend URL, e.g. https://kukoo-backend.onrender.com) to Vercel Environment Variables and redeploy.'
+        );
+      }
       if (!res.ok) {
         throw new Error(
-          `Server returned HTTP ${res.status}. If deployed on Vercel/Render, ensure the backend service is active and VITE_API_BASE_URL is set in Vercel settings.`
+          `Server returned HTTP ${res.status}. If deployed on Vercel/Render, ensure your backend is live on Render and VITE_API_BASE_URL is set in Vercel settings.`
         );
       }
       throw new Error(
@@ -1283,6 +1292,24 @@ function App() {
                   {t('authTabRegister', 'Create Account')}
                 </button>
               </div>
+
+              {isMissingApiBaseInProd && (
+                <div className="p-3.5 bg-amber-50 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/30 text-amber-800 dark:text-amber-300 rounded-xl text-xs space-y-1.5 leading-relaxed">
+                  <div className="flex items-center gap-1.5 font-bold">
+                    <span className="material-symbols-outlined text-sm">warning</span>
+                    <span>Backend Connection Setup Needed</span>
+                  </div>
+                  <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                    To connect this deployed frontend to your Node.js API, add the Environment Variable in Vercel:
+                  </p>
+                  <code className="block p-1.5 bg-amber-100/80 dark:bg-amber-950/60 rounded font-mono text-[10px] text-amber-900 dark:text-amber-200">
+                    VITE_API_BASE_URL = https://your-backend.onrender.com
+                  </code>
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 italic">
+                    Then trigger a Redeploy on Vercel so the build includes this variable.
+                  </p>
+                </div>
+              )}
 
               {authError && (
                 <div className="p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-400 rounded-xl text-xs flex items-center gap-2">
