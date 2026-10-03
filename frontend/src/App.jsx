@@ -1104,7 +1104,6 @@ function App() {
               <img src="/favicon.svg" alt="kukoo" className="w-10 h-10 rounded-xl object-contain shadow-md shadow-amber-500/20" />
               <div>
                 <span className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">kukoo</span>
-                <span className="hidden sm:inline-block ml-2 px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 rounded-full">{t('saasTag', 'SaaS')}</span>
               </div>
             </div>
 
