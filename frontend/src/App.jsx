@@ -193,11 +193,60 @@ function App() {
   // -------------------------------------------------------------
   // 5. Data Fetching & Sync (Configurable for Vercel -> Render)
   // -------------------------------------------------------------
-  const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+  const [apiBaseUrl, setApiBaseUrl] = useState(() => {
+    return (
+      localStorage.getItem('kukoo_api_url') ||
+      (import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '') : (
+        typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+          ? ''
+          : 'https://kukoo-backend.onrender.com'
+      ))
+    );
+  });
+  const [showEndpointConfig, setShowEndpointConfig] = useState(false);
+  const [endpointInput, setEndpointInput] = useState(() => {
+    return localStorage.getItem('kukoo_api_url') || import.meta.env.VITE_API_BASE_URL || 'https://kukoo-backend.onrender.com';
+  });
+  const [connectionTesting, setConnectionTesting] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState(null);
+
+  const API_BASE = (apiBaseUrl || '').replace(/\/$/, '');
 
   const isMissingApiBaseInProd = useMemo(() => {
-    return !API_BASE && typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-  }, [API_BASE]);
+    return false; // Auto-defaults to live Render backend fallback or custom user config
+  }, []);
+
+  const handleSaveEndpoint = (newUrl) => {
+    const cleaned = (newUrl || '').trim().replace(/\/$/, '');
+    setApiBaseUrl(cleaned);
+    setEndpointInput(cleaned);
+    if (cleaned) {
+      localStorage.setItem('kukoo_api_url', cleaned);
+    } else {
+      localStorage.removeItem('kukoo_api_url');
+    }
+    showToast('Backend API endpoint updated successfully.');
+  };
+
+  const handleTestConnection = async () => {
+    setConnectionTesting(true);
+    setConnectionStatus(null);
+    try {
+      const target = (endpointInput || '').trim().replace(/\/$/, '');
+      const testUrl = target ? `${target}/api/ping` : '/api/ping';
+      const res = await fetch(testUrl);
+      if (res.ok) {
+        const pingData = await res.json().catch(() => ({}));
+        setConnectionStatus({ ok: true, message: `Connected! Service: ${pingData.service || 'Kukoo API'}` });
+      } else {
+        setConnectionStatus({ ok: false, message: `Received HTTP ${res.status}. Please check your Render service status.` });
+      }
+    } catch (err) {
+      setConnectionStatus({ ok: false, message: `Connection failed: ${err.message}. If Render is asleep, allow 30-50s to wake.` });
+    } finally {
+      setConnectionTesting(false);
+    }
+  };
 
   const handleLogout = useCallback(() => {
     setUser(null);
@@ -1293,23 +1342,79 @@ function App() {
                 </button>
               </div>
 
-              {isMissingApiBaseInProd && (
-                <div className="p-3.5 bg-amber-50 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/30 text-amber-800 dark:text-amber-300 rounded-xl text-xs space-y-1.5 leading-relaxed">
-                  <div className="flex items-center gap-1.5 font-bold">
-                    <span className="material-symbols-outlined text-sm">warning</span>
-                    <span>Backend Connection Setup Needed</span>
+              {/* Active Backend Connection & Endpoint Configurator */}
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span className="font-semibold">Backend:</span>
+                    <span className="font-mono text-[11px] text-slate-800 dark:text-slate-200 truncate max-w-[180px]">
+                      {API_BASE || '(Local Proxy)'}
+                    </span>
                   </div>
-                  <p className="text-[11px] text-amber-700 dark:text-amber-400">
-                    To connect this deployed frontend to your Node.js API, add the Environment Variable in Vercel:
-                  </p>
-                  <code className="block p-1.5 bg-amber-100/80 dark:bg-amber-950/60 rounded font-mono text-[10px] text-amber-900 dark:text-amber-200">
-                    VITE_API_BASE_URL = https://your-backend.onrender.com
-                  </code>
-                  <p className="text-[10px] text-amber-600 dark:text-amber-400 italic">
-                    Then trigger a Redeploy on Vercel so the build includes this variable.
-                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowEndpointConfig(!showEndpointConfig)}
+                    className="text-[11px] font-bold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-0.5"
+                  >
+                    <span>{showEndpointConfig ? 'Hide' : 'Change URL'}</span>
+                    <span className="material-symbols-outlined text-xs">tune</span>
+                  </button>
                 </div>
-              )}
+
+                {showEndpointConfig && (
+                  <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-2">
+                    <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block">
+                      Custom Render Backend URL:
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="url"
+                        className="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono text-slate-900 dark:text-white"
+                        placeholder="https://your-backend.onrender.com"
+                        value={endpointInput}
+                        onChange={e => setEndpointInput(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSaveEndpoint(endpointInput)}
+                        className="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
+                      >
+                        Save
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <button
+                        type="button"
+                        onClick={handleTestConnection}
+                        disabled={connectionTesting}
+                        className="text-[11px] font-bold text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1"
+                      >
+                        <span className="material-symbols-outlined text-xs">network_ping</span>
+                        <span>{connectionTesting ? 'Testing...' : 'Test Connection'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSaveEndpoint('https://kukoo-backend.onrender.com')}
+                        className="text-[10px] text-slate-500 hover:underline"
+                      >
+                        Reset Default
+                      </button>
+                    </div>
+
+                    {connectionStatus && (
+                      <div className={`p-2 rounded-lg text-[11px] ${
+                        connectionStatus.ok
+                          ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20'
+                          : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20'
+                      }`}>
+                        {connectionStatus.message}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {authError && (
                 <div className="p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-400 rounded-xl text-xs flex items-center gap-2">
