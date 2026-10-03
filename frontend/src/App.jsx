@@ -195,6 +195,43 @@ function App() {
   // -------------------------------------------------------------
   const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
+  const handleLogout = useCallback(() => {
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem('kukoo_user');
+    localStorage.removeItem('kukoo_token');
+    localStorage.removeItem('flockpulse_user');
+    localStorage.removeItem('flockpulse_token');
+    showToast('Session ended. You are now logged out.', 'info');
+  }, [showToast]);
+
+  const parseJsonResponse = useCallback(async (res) => {
+    const text = await res.text();
+    let data = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = null;
+    }
+
+    if (!data) {
+      if (!res.ok) {
+        throw new Error(
+          `Server returned HTTP ${res.status}. If deployed on Vercel/Render, ensure the backend service is active and VITE_API_BASE_URL is set in Vercel settings.`
+        );
+      }
+      throw new Error(
+        'Backend returned non-JSON response. Please verify that VITE_API_BASE_URL points directly to your backend URL (e.g. https://kukoo-backend.onrender.com).'
+      );
+    }
+
+    if (!res.ok) {
+      throw new Error(data.error || `Request failed (HTTP ${res.status})`);
+    }
+
+    return data;
+  }, []);
+
   const authHeaders = useMemo(() => ({
     'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json'
@@ -202,26 +239,26 @@ function App() {
 
   const authenticatedFetch = useCallback(async (url, options = {}) => {
     const fullUrl = url.startsWith('http') ? url : `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
-    const res = await fetch(fullUrl, {
-      ...options,
-      headers: {
-        ...authHeaders,
-        ...(options.headers || {})
-      }
-    });
+    let res;
+    try {
+      res = await fetch(fullUrl, {
+        ...options,
+        headers: {
+          ...authHeaders,
+          ...(options.headers || {})
+        }
+      });
+    } catch (networkErr) {
+      throw new Error(`Network error connecting to backend (${networkErr.message}). Ensure your backend is running.`);
+    }
 
     if (res.status === 401 || res.status === 403) {
       handleLogout();
       throw new Error('Session expired or unauthorized');
     }
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: 'Request failed' }));
-      throw new Error(err.error || `HTTP ${res.status}`);
-    }
-
-    return res.json();
-  }, [authHeaders, API_BASE]);
+    return parseJsonResponse(res);
+  }, [authHeaders, API_BASE, handleLogout, parseJsonResponse]);
 
   const fetchAllData = useCallback(async () => {
     if (!token) return;
@@ -284,9 +321,11 @@ function App() {
             headers: { 'Authorization': `Bearer ${savedToken}` }
           });
           if (res.ok) {
-            const data = await res.json();
-            setUser(data.user);
-            localStorage.setItem('kukoo_user', JSON.stringify(data.user));
+            const data = await parseJsonResponse(res);
+            if (data?.user) {
+              setUser(data.user);
+              localStorage.setItem('kukoo_user', JSON.stringify(data.user));
+            }
           } else {
             handleLogout();
           }
@@ -296,7 +335,7 @@ function App() {
       }
     };
     verifySession();
-  }, [API_BASE]);
+  }, [API_BASE, handleLogout, parseJsonResponse]);
 
   // Real-Time Server-Sent Events (SSE) Listener
   useEffect(() => {
@@ -368,8 +407,7 @@ function App() {
         body: JSON.stringify(loginForm)
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Authentication failed');
+      const data = await parseJsonResponse(res);
 
       setUser(data.user);
       setToken(data.token);
@@ -405,8 +443,7 @@ function App() {
         body: JSON.stringify(registerForm)
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Registration failed');
+      const data = await parseJsonResponse(res);
 
       setUser(data.user);
       setToken(data.token);
@@ -421,16 +458,6 @@ function App() {
     } finally {
       setAuthLoading(false);
     }
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem('kukoo_user');
-    localStorage.removeItem('kukoo_token');
-    localStorage.removeItem('flockpulse_user');
-    localStorage.removeItem('flockpulse_token');
-    showToast('Session ended. You are now logged out.', 'info');
   };
 
   // Persona Quick Switcher for Evaluation
