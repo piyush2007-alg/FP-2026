@@ -17,11 +17,9 @@ import { LANGUAGES, translations } from './i18n';
 import {
   getSupabase,
   isSupabaseConfigured,
-  saveSupabaseConfig,
   supabaseSignIn,
   supabaseSignUp,
-  supabaseSignOut,
-  supabaseSignInWithOAuth
+  supabaseSignOut
 } from './supabaseClient';
 
 // Register Chart.js components
@@ -237,101 +235,13 @@ function App() {
   }, []);
 
   // -------------------------------------------------------------
-  // 5. Data Fetching & Sync (Configurable for Vercel -> Render)
+  // 5. Data Fetching & Sync
   // -------------------------------------------------------------
-  const [apiBaseUrl, setApiBaseUrl] = useState(() => {
-    return (
-      localStorage.getItem('kukoo_api_url') ||
-      (import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '') : '')
-    );
-  });
-  const [showEndpointConfig, setShowEndpointConfig] = useState(false);
-  const [endpointInput, setEndpointInput] = useState(() => {
-    return localStorage.getItem('kukoo_api_url') || import.meta.env.VITE_API_BASE_URL || '';
-  });
-  const [connectionTesting, setConnectionTesting] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState(null);
-
-  // Supabase Auth States
-  const [supabaseUrlInput, setSupabaseUrlInput] = useState(() => {
-    return localStorage.getItem('kukoo_supabase_url') || import.meta.env.VITE_SUPABASE_URL || '';
-  });
-  const [supabaseKeyInput, setSupabaseKeyInput] = useState(() => {
-    return localStorage.getItem('kukoo_supabase_anon_key') || import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-  });
-  const [supabaseTesting, setSupabaseTesting] = useState(false);
-  const [supabaseStatus, setSupabaseStatus] = useState(null);
-  const [authProvider, setAuthProvider] = useState(() => {
-    return isSupabaseConfigured() ? 'supabase' : 'builtIn';
+  const [apiBaseUrl] = useState(() => {
+    return import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '') : '';
   });
 
   const API_BASE = (apiBaseUrl || '').replace(/\/$/, '');
-
-  const handleSaveEndpoint = (newUrl) => {
-    const cleaned = (newUrl || '').trim().replace(/\/$/, '');
-    setApiBaseUrl(cleaned);
-    setEndpointInput(cleaned);
-    if (cleaned) {
-      localStorage.setItem('kukoo_api_url', cleaned);
-    } else {
-      localStorage.removeItem('kukoo_api_url');
-    }
-    showToast('Backend API endpoint updated successfully.');
-  };
-
-  const handleSaveSupabaseSettings = () => {
-    saveSupabaseConfig(supabaseUrlInput, supabaseKeyInput);
-    if (supabaseUrlInput && supabaseKeyInput) {
-      setAuthProvider('supabase');
-      showToast('Supabase configuration saved & activated.');
-    } else {
-      setAuthProvider('builtIn');
-      showToast('Supabase configuration cleared. Using built-in serverless.');
-    }
-  };
-
-  const handleTestSupabaseConnection = async () => {
-    setSupabaseTesting(true);
-    setSupabaseStatus(null);
-    try {
-      const client = saveSupabaseConfig(supabaseUrlInput, supabaseKeyInput);
-      if (!client) {
-        setSupabaseStatus({ ok: false, message: 'Please enter both Supabase URL and Anon Key.' });
-        return;
-      }
-      const { error } = await client.auth.getSession();
-      if (error) {
-        setSupabaseStatus({ ok: false, message: `Supabase Error: ${error.message}` });
-      } else {
-        setSupabaseStatus({ ok: true, message: 'Successfully connected to Supabase Auth & PostgreSQL!' });
-        setAuthProvider('supabase');
-      }
-    } catch (err) {
-      setSupabaseStatus({ ok: false, message: `Connection failed: ${err.message}` });
-    } finally {
-      setSupabaseTesting(false);
-    }
-  };
-
-  const handleTestConnection = async () => {
-    setConnectionTesting(true);
-    setConnectionStatus(null);
-    try {
-      const target = (endpointInput || '').trim().replace(/\/$/, '');
-      const testUrl = target ? `${target}/api/ping` : '/api/ping';
-      const res = await fetch(testUrl);
-      if (res.ok) {
-        const pingData = await res.json().catch(() => ({}));
-        setConnectionStatus({ ok: true, message: `Connected! Service: ${pingData.service || 'Kukoo API'}` });
-      } else {
-        setConnectionStatus({ ok: false, message: `Received HTTP ${res.status}. Please check your Render service status.` });
-      }
-    } catch (err) {
-      setConnectionStatus({ ok: false, message: `Connection failed: ${err.message}. If Render is asleep, allow 30-50s to wake.` });
-    } finally {
-      setConnectionTesting(false);
-    }
-  };
 
   const handleLogout = useCallback(() => {
     supabaseSignOut().catch(() => {});
@@ -585,72 +495,42 @@ function App() {
   }, []);
 
   // -------------------------------------------------------------
-  // 6. Authentication Actions
+  // 6. Authentication Actions (Supabase)
   // -------------------------------------------------------------
-  const handleGoogleOAuthLogin = async () => {
-    setAuthLoading(true);
-    setAuthError('');
-    try {
-      if (!isSupabaseConfigured()) {
-        throw new Error('Please configure Supabase URL & Anon Key in Settings below to enable Google OAuth.');
-      }
-      await supabaseSignInWithOAuth('google');
-    } catch (err) {
-      setAuthError(err.message);
-      setAuthLoading(false);
-    }
-  };
-
   const handleLogin = async (e) => {
     e.preventDefault();
     setAuthLoading(true);
     setAuthError('');
 
     try {
-      // 1. If Supabase is selected/configured, attempt Supabase Auth first
-      if (authProvider === 'supabase' && isSupabaseConfigured()) {
-        try {
-          const data = await supabaseSignIn(loginForm.username, loginForm.password);
-          if (data?.session) {
-            const profile = data.user?.user_metadata || {};
-            const supaUser = {
-              id: data.user.id,
-              name: profile.name || profile.username || data.user.email?.split('@')[0] || 'Supabase User',
-              username: profile.username || data.user.email?.split('@')[0] || 'user',
-              email: data.user.email,
-              role: profile.role || 'Staff'
-            };
-            setUser(supaUser);
-            setToken(data.session.access_token);
-            localStorage.setItem('kukoo_user', JSON.stringify(supaUser));
-            localStorage.setItem('kukoo_token', data.session.access_token);
-            setShowAuthModal(false);
-            showToast(`Signed in with Supabase as ${supaUser.name} (${supaUser.role})!`);
-            setLoginForm({ username: '', password: '' });
-            return;
-          }
-        } catch (supaErr) {
-          // If Supabase fails and it was specifically in Supabase mode, display the error
-          if (authProvider === 'supabase') {
-            throw supaErr;
-          }
+      if (isSupabaseConfigured()) {
+        const data = await supabaseSignIn(loginForm.username, loginForm.password);
+        if (data?.session) {
+          const profile = data.user?.user_metadata || {};
+          const supaUser = {
+            id: data.user.id,
+            name: profile.name || profile.username || data.user.email?.split('@')[0] || 'Operator',
+            username: profile.username || data.user.email?.split('@')[0] || 'user',
+            email: data.user.email,
+            role: profile.role || 'Staff'
+          };
+          setUser(supaUser);
+          setToken(data.session.access_token);
+          localStorage.setItem('kukoo_user', JSON.stringify(supaUser));
+          localStorage.setItem('kukoo_token', data.session.access_token);
+          setShowAuthModal(false);
+          showToast(`Welcome back, ${supaUser.name} (${supaUser.role})!`);
+          setLoginForm({ username: '', password: '' });
+          return;
         }
       }
 
-      // 2. Built-in Serverless / API Auth Fallback
-      let res;
-      try {
-        res = await fetch(`${API_BASE}/api/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(loginForm)
-        });
-      } catch (netErr) {
-        throw new Error(
-          `Unable to connect to backend (${netErr.message}). If using Render, please allow 30-45s for wake-up, or click 'Supabase Auth' / 'Reset to Vercel Built-In'.`
-        );
-      }
-
+      // Backend API fallback
+      const res = await fetch(`${API_BASE}/api/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(loginForm)
+      });
       const data = await parseJsonResponse(res);
 
       setUser(data.user);
@@ -680,8 +560,7 @@ function App() {
     }
 
     try {
-      // 1. If Supabase is selected/configured, create account in Supabase
-      if (authProvider === 'supabase' && isSupabaseConfigured()) {
+      if (isSupabaseConfigured()) {
         const userEmail = registerForm.email || `${registerForm.username}@kukoo-poultry.local`;
         const data = await supabaseSignUp({
           email: userEmail,
@@ -709,27 +588,19 @@ function App() {
           setRegisterForm({ username: '', email: '', password: '', confirmPassword: '', role: 'Staff' });
           return;
         } else {
-          showToast('Account registered on Supabase! You can now sign in with your credentials.', 'info');
+          showToast('Account registered on Supabase! Please sign in with your credentials.', 'info');
           setAuthTab('signin');
           setLoginForm({ username: userEmail, password: registerForm.password });
           return;
         }
       }
 
-      // 2. Built-in Serverless / API Registration
-      let res;
-      try {
-        res = await fetch(`${API_BASE}/api/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(registerForm)
-        });
-      } catch (netErr) {
-        throw new Error(
-          `Unable to connect to backend (${netErr.message}). You can also configure Supabase Auth in Settings.`
-        );
-      }
-
+      // Backend API fallback
+      const res = await fetch(`${API_BASE}/api/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(registerForm)
+      });
       const data = await parseJsonResponse(res);
 
       setUser(data.user);
@@ -744,21 +615,6 @@ function App() {
       setAuthError(err.message);
     } finally {
       setAuthLoading(false);
-    }
-  };
-
-  // Persona Quick Switcher for Evaluation
-  const handleQuickLogin = (demoRole) => {
-    const creds = {
-      admin: { username: 'admin', password: 'admin123' },
-      staff: { username: 'staff', password: 'staff123' },
-      vet: { username: 'vet', password: 'vet123' }
-    };
-    const c = creds[demoRole];
-    if (c) {
-      setLoginForm(c);
-      setAuthTab('signin');
-      setShowAuthModal(true);
     }
   };
 
@@ -1507,7 +1363,7 @@ function App() {
                   {authTab === 'signin' ? t('authSignInTitle', 'Sign In to Farm Console') : t('authRegisterTitle', 'Register Operator Account')}
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {authTab === 'signin' ? t('authSignInSub', 'Enter your credentials to access farm telemetry.') : t('authRegisterSub', 'Create an operator profile with role privileges.')}
+                  {authTab === 'signin' ? t('authSignInSub', 'Enter your email and password to access farm telemetry.') : t('authRegisterSub', 'Create an operator profile with role privileges.')}
                 </p>
               </div>
 
@@ -1533,179 +1389,6 @@ function App() {
                 </button>
               </div>
 
-              {/* Auth Provider Selector */}
-              <div className="flex bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-bold">
-                <button
-                  type="button"
-                  onClick={() => setAuthProvider('supabase')}
-                  className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-                    authProvider === 'supabase'
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                  <span>Supabase Auth</span>
-                  {isSupabaseConfigured() && <span className="text-[10px] bg-emerald-700/50 px-1 py-0.2 rounded text-emerald-200">Active</span>}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAuthProvider('builtIn')}
-                  className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-                    authProvider === 'builtIn'
-                      ? 'bg-sky-600 text-white shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <span className="w-2 h-2 rounded-full bg-sky-400"></span>
-                  <span>Built-In / Demo</span>
-                </button>
-              </div>
-
-              {/* Active Connection & Supabase Settings Bar */}
-              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
-                    <span className={`w-2 h-2 rounded-full ${authProvider === 'supabase' ? (isSupabaseConfigured() ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500') : 'bg-sky-500'}`}></span>
-                    <span className="font-semibold">{authProvider === 'supabase' ? 'Supabase:' : 'Serverless API:'}</span>
-                    <span className="font-mono text-[11px] text-slate-800 dark:text-slate-200 truncate max-w-[180px]">
-                      {authProvider === 'supabase'
-                        ? (supabaseUrlInput ? supabaseUrlInput.replace(/^https?:\/\//, '') : 'Not configured')
-                        : (API_BASE ? API_BASE : 'Vercel Serverless (Built-In)')}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowEndpointConfig(!showEndpointConfig)}
-                    className="text-[11px] font-bold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-0.5"
-                  >
-                    <span>{showEndpointConfig ? 'Hide' : 'Configure'}</span>
-                    <span className="material-symbols-outlined text-xs">tune</span>
-                  </button>
-                </div>
-
-                {showEndpointConfig && (
-                  <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-3">
-                    {/* Supabase Config Fields */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                          ⚡ Supabase Project URL:
-                        </label>
-                        <a
-                          href="https://supabase.com/dashboard"
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline"
-                        >
-                          Supabase Dashboard ↗
-                        </a>
-                      </div>
-                      <input
-                        type="url"
-                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono text-slate-900 dark:text-white"
-                        placeholder="https://your-project.supabase.co"
-                        value={supabaseUrlInput}
-                        onChange={e => setSupabaseUrlInput(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block">
-                        🔑 Supabase Anon / Public Key:
-                      </label>
-                      <input
-                        type="password"
-                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono text-slate-900 dark:text-white"
-                        placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                        value={supabaseKeyInput}
-                        onChange={e => setSupabaseKeyInput(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={handleTestSupabaseConnection}
-                        disabled={supabaseTesting}
-                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1"
-                      >
-                        <span className="material-symbols-outlined text-xs">bolt</span>
-                        <span>{supabaseTesting ? 'Connecting...' : 'Test & Save Supabase'}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleSaveSupabaseSettings}
-                        className="text-[10px] text-slate-500 hover:underline"
-                      >
-                        Save without test
-                      </button>
-                    </div>
-
-                    {supabaseStatus && (
-                      <div className={`p-2 rounded-lg text-[11px] ${
-                        supabaseStatus.ok
-                          ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20'
-                          : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20'
-                      }`}>
-                        {supabaseStatus.message}
-                      </div>
-                    )}
-
-                    {/* Vercel / Render Backend API Endpoint Config */}
-                    <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-2">
-                      <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block">
-                        Custom Backend URL (Optional fallback):
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="url"
-                          className="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono text-slate-900 dark:text-white"
-                          placeholder="Leave blank for Vercel built-in"
-                          value={endpointInput}
-                          onChange={e => setEndpointInput(e.target.value)}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleSaveEndpoint(endpointInput)}
-                          className="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
-                        >
-                          Save
-                        </button>
-                      </div>
-                      <div className="flex items-center justify-between pt-0.5">
-                        <button
-                          type="button"
-                          onClick={handleTestConnection}
-                          disabled={connectionTesting}
-                          className="text-[11px] font-bold text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1"
-                        >
-                          <span className="material-symbols-outlined text-xs">network_ping</span>
-                          <span>{connectionTesting ? 'Testing...' : 'Test Backend'}</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSaveEndpoint('')}
-                          className="text-[10px] text-slate-500 hover:underline"
-                        >
-                          Reset to Vercel Built-In
-                        </button>
-                      </div>
-
-                      {connectionStatus && (
-                        <div className={`p-2 rounded-lg text-[11px] ${
-                          connectionStatus.ok
-                            ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20'
-                            : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20'
-                        }`}>
-                          {connectionStatus.message}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
               {authError && (
                 <div className="p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-400 rounded-xl text-xs flex items-center gap-2">
                   <span className="material-symbols-outlined text-sm">error</span>
@@ -1715,131 +1398,63 @@ function App() {
 
               {/* Sign In Form */}
               {authTab === 'signin' && (
-                <div className="space-y-4">
-                  {/* Google OAuth Login with Supabase */}
-                  {authProvider === 'supabase' && (
-                    <div className="space-y-3">
+                <form className="space-y-3.5" onSubmit={handleLogin}>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      {t('emailLabel', 'Email Address *')}
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      className="mt-1 w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 placeholder:text-slate-400"
+                      placeholder="operator@kukoo.io"
+                      value={loginForm.username}
+                      onChange={e => setLoginForm({ ...loginForm, username: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('passwordLabel', 'Password *')}</label>
+                    <div className="relative mt-1">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 pr-10 placeholder:text-slate-400"
+                        placeholder="••••••••"
+                        value={loginForm.password}
+                        onChange={e => setLoginForm({ ...loginForm, password: e.target.value })}
+                      />
                       <button
                         type="button"
-                        onClick={handleGoogleOAuthLogin}
-                        disabled={authLoading}
-                        className="w-full py-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white"
                       >
-                        <svg className="w-4 h-4" viewBox="0 0 24 24">
-                          <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
-                          <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
-                          <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
-                          <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
-                        </svg>
-                        <span>Continue with Google (Supabase OAuth)</span>
+                        <span className="material-symbols-outlined text-sm">{showPassword ? 'visibility_off' : 'visibility'}</span>
                       </button>
-
-                      <div className="flex items-center gap-2 text-slate-400 text-[11px]">
-                        <div className="flex-1 border-t border-slate-200 dark:border-slate-800"></div>
-                        <span>or sign in with credentials</span>
-                        <div className="flex-1 border-t border-slate-200 dark:border-slate-800"></div>
-                      </div>
                     </div>
-                  )}
+                  </div>
 
-                  {/* Evaluation 1-Click Role Logins */}
-                  {authProvider === 'builtIn' && (
-                    <div className="p-3 bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2">
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t('quickPersonaPrompt', 'Quick Demo Access:')}</p>
-                      <div className="grid grid-cols-3 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleQuickLogin('admin')}
-                          className="py-1.5 px-2 bg-sky-50 dark:bg-sky-500/10 hover:bg-sky-100 dark:hover:bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/20 rounded-xl text-[11px] font-bold transition-colors"
-                        >
-                          {t('adminRole', '👑 Admin')}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleQuickLogin('staff')}
-                          className="py-1.5 px-2 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/20 rounded-xl text-[11px] font-bold transition-colors"
-                        >
-                          {t('staffRole', '🌾 Staff')}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleQuickLogin('vet')}
-                          className="py-1.5 px-2 bg-teal-50 dark:bg-teal-500/10 hover:bg-teal-100 dark:hover:bg-teal-500/20 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-500/20 rounded-xl text-[11px] font-bold transition-colors"
-                        >
-                          {t('vetRole', '🩺 Vet')}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  <form className="space-y-3.5" onSubmit={handleLogin}>
-                    <div>
-                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        {authProvider === 'supabase' ? 'Supabase Email *' : t('usernameLabel', 'Username *')}
-                      </label>
-                      <input
-                        type={authProvider === 'supabase' ? 'email' : 'text'}
-                        required
-                        className="mt-1 w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-sky-500 placeholder:text-slate-400"
-                        placeholder={authProvider === 'supabase' ? 'operator@kukoo.io' : 'admin, staff, or email'}
-                        value={loginForm.username}
-                        onChange={e => setLoginForm({ ...loginForm, username: e.target.value })}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('passwordLabel', 'Password *')}</label>
-                      <div className="relative mt-1">
-                        <input
-                          type={showPassword ? 'text' : 'password'}
-                          required
-                          className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-sky-500 pr-10 placeholder:text-slate-400"
-                          placeholder="••••••••"
-                          value={loginForm.password}
-                          onChange={e => setLoginForm({ ...loginForm, password: e.target.value })}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white"
-                        >
-                          <span className="material-symbols-outlined text-sm">{showPassword ? 'visibility_off' : 'visibility'}</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={authLoading}
-                      className={`w-full py-3 ${
-                        authProvider === 'supabase'
-                          ? 'bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 shadow-emerald-500/25'
-                          : 'bg-gradient-to-r from-sky-600 to-teal-500 hover:from-sky-700 hover:to-teal-600 shadow-sky-500/25'
-                      } text-white font-extrabold rounded-xl text-sm transition-all shadow-md flex items-center justify-center gap-2 mt-2 disabled:opacity-50`}
-                    >
-                      {authLoading ? <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span> : <span className="material-symbols-outlined text-sm">login</span>}
-                      <span>
-                        {authLoading
-                          ? t('signingIn', 'Authenticating...')
-                          : authProvider === 'supabase'
-                          ? 'Sign In with Supabase'
-                          : t('signInBtn', 'Sign In to Dashboard')}
-                      </span>
-                    </button>
-                  </form>
-                </div>
+                  <button
+                    type="submit"
+                    disabled={authLoading}
+                    className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white font-extrabold rounded-xl text-sm transition-all shadow-md shadow-emerald-500/25 flex items-center justify-center gap-2 mt-2 disabled:opacity-50"
+                  >
+                    {authLoading ? <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span> : <span className="material-symbols-outlined text-sm">login</span>}
+                    <span>{authLoading ? t('signingIn', 'Authenticating...') : t('signInBtn', 'Sign In to Dashboard')}</span>
+                  </button>
+                </form>
               )}
 
               {/* Register Form */}
               {authTab === 'register' && (
                 <form className="space-y-3.5" onSubmit={handleRegister}>
                   <div>
-                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('usernameLabel', 'Desired Username *')}</label>
+                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('usernameLabel', 'Full Name / Operator Name *')}</label>
                     <input
                       type="text"
                       required
-                      className="mt-1 w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-sky-500 placeholder:text-slate-400"
-                      placeholder="e.g. farm_operator"
+                      className="mt-1 w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 placeholder:text-slate-400"
+                      placeholder="e.g. Ramesh Kumar"
                       value={registerForm.username}
                       onChange={e => setRegisterForm({ ...registerForm, username: e.target.value })}
                     />
@@ -1847,12 +1462,12 @@ function App() {
 
                   <div>
                     <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      {authProvider === 'supabase' ? 'Email Address *' : t('emailLabel', 'Email Address (Optional)')}
+                      {t('emailLabel', 'Email Address *')}
                     </label>
                     <input
                       type="email"
-                      required={authProvider === 'supabase'}
-                      className="mt-1 w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-sky-500 placeholder:text-slate-400"
+                      required
+                      className="mt-1 w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 placeholder:text-slate-400"
                       placeholder="operator@kukoo.io"
                       value={registerForm.email}
                       onChange={e => setRegisterForm({ ...registerForm, email: e.target.value })}
@@ -1869,7 +1484,7 @@ function App() {
                           onClick={() => setRegisterForm({ ...registerForm, role: r })}
                           className={`py-2 px-1 rounded-xl border text-xs font-bold transition-all ${
                             registerForm.role === r
-                              ? 'border-sky-500 bg-sky-50 dark:bg-sky-500/20 text-sky-700 dark:text-white'
+                              ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-white'
                               : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400'
                           }`}
                         >
@@ -1885,7 +1500,7 @@ function App() {
                       <input
                         type={showPassword ? 'text' : 'password'}
                         required
-                        className="mt-1 w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-sky-500 placeholder:text-slate-400"
+                        className="mt-1 w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 placeholder:text-slate-400"
                         placeholder="Min 6 chars"
                         value={registerForm.password}
                         onChange={e => setRegisterForm({ ...registerForm, password: e.target.value })}
@@ -1896,7 +1511,7 @@ function App() {
                       <input
                         type={showPassword ? 'text' : 'password'}
                         required
-                        className="mt-1 w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-sky-500 placeholder:text-slate-400"
+                        className="mt-1 w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 placeholder:text-slate-400"
                         placeholder="Confirm"
                         value={registerForm.confirmPassword}
                         onChange={e => setRegisterForm({ ...registerForm, confirmPassword: e.target.value })}
@@ -1907,19 +1522,11 @@ function App() {
                   <button
                     type="submit"
                     disabled={authLoading}
-                    className={`w-full py-3 ${
-                      authProvider === 'supabase'
-                        ? 'bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 shadow-emerald-500/25'
-                        : 'bg-gradient-to-r from-sky-600 to-teal-500 hover:from-sky-700 hover:to-teal-600 shadow-sky-500/25'
-                    } text-white font-extrabold rounded-xl text-sm transition-all shadow-md flex items-center justify-center gap-2 mt-2 disabled:opacity-50`}
+                    className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white font-extrabold rounded-xl text-sm transition-all shadow-md shadow-emerald-500/25 flex items-center justify-center gap-2 mt-2 disabled:opacity-50"
                   >
                     {authLoading ? <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span> : <span className="material-symbols-outlined text-sm">person_add</span>}
                     <span>
-                      {authLoading
-                        ? t('registering', 'Registering...')
-                        : authProvider === 'supabase'
-                        ? 'Create Supabase Account'
-                        : t('createAccountBtn', 'Create Account & Open')}
+                      {authLoading ? t('registering', 'Registering...') : t('createAccountBtn', 'Create Account & Open')}
                     </span>
                   </button>
                 </form>
