@@ -11,7 +11,7 @@ export const getSupabaseConfig = () => {
   const url = (localUrl || envUrl || '').trim();
   const anonKey = (localKey || envKey || '').trim();
 
-  const isDummy = (str) => !str || str.includes('your-project-id') || str.includes('placeholder') || str.startsWith('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...');
+  const isDummy = (str) => !str || str.includes('your-project-id') || str.includes('placeholder') || str.includes('...');
   const isConfigured = Boolean(url && anonKey && !isDummy(url) && !isDummy(anonKey));
 
   return { url, anonKey, isConfigured };
