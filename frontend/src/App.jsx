@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -31,6 +31,46 @@ ChartJS.register(
 
 // Chart.js default fonts & styles
 ChartJS.defaults.font.family = "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif";
+
+function LanguageSelector({ lang, setLang, onSelect, align = 'right' }) {
+  return (
+    <div className="relative group">
+      <button
+        type="button"
+        className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all flex items-center gap-1.5 text-xs font-bold shadow-sm"
+        title="Select Language / भाषा चुनें"
+      >
+        <span className="text-base leading-none">{LANGUAGES.find(l => l.code === lang)?.flag || '🇮🇳'}</span>
+        <span className="hidden sm:inline font-bold">{LANGUAGES.find(l => l.code === lang)?.label || 'English (IN)'}</span>
+        <span className="material-symbols-outlined text-xs">expand_more</span>
+      </button>
+      <div className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} top-full mt-1.5 w-52 max-h-80 overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl py-1.5 z-50 hidden group-hover:block transition-all backdrop-blur-md`}>
+        <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900">
+          🇮🇳 Indian Languages
+        </div>
+        {LANGUAGES.map(l => (
+          <button
+            key={l.code}
+            type="button"
+            onClick={() => {
+              setLang(l.code);
+              if (onSelect) onSelect(l);
+            }}
+            className={`w-full px-3 py-2 text-left text-xs font-semibold flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${
+              lang === l.code ? 'text-sky-600 dark:text-sky-400 font-bold bg-sky-50 dark:bg-sky-500/10' : 'text-slate-700 dark:text-slate-300'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <span className="text-base leading-none">{l.flag}</span>
+              <span>{l.label}</span>
+            </span>
+            {lang === l.code && <span className="material-symbols-outlined text-sm text-sky-600 dark:text-sky-400">check</span>}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function App() {
   // -------------------------------------------------------------
@@ -102,7 +142,6 @@ function App() {
     role: 'Staff'
   });
   const [authError, setAuthError] = useState('');
-  const [authSuccess, setAuthSuccess] = useState('');
 
   // -------------------------------------------------------------
   // 3. Navigation & UI State
@@ -182,8 +221,6 @@ function App() {
   const [generatedReport, setGeneratedReport] = useState(null);
   const [reportLoading, setReportLoading] = useState(false);
 
-  const [selectedBatchDetail, setSelectedBatchDetail] = useState(null);
-
   // Toast notification helper
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type });
@@ -207,10 +244,6 @@ function App() {
   const [connectionStatus, setConnectionStatus] = useState(null);
 
   const API_BASE = (apiBaseUrl || '').replace(/\/$/, '');
-
-  const isMissingApiBaseInProd = useMemo(() => {
-    return false; // Auto-defaults to live Render backend fallback or custom user config
-  }, []);
 
   const handleSaveEndpoint = (newUrl) => {
     const cleaned = (newUrl || '').trim().replace(/\/$/, '');
@@ -299,7 +332,7 @@ function App() {
         ...options,
         headers: {
           ...authHeaders,
-          ...(options.headers || {})
+          ...options.headers
         }
       });
     } catch (networkErr) {
@@ -363,7 +396,7 @@ function App() {
     } finally {
       setLoading(false);
     }
-  }, [token, chartRange, user?.role, authenticatedFetch]);
+  }, [token, chartRange, user, authenticatedFetch]);
 
   // Session verification on mount
   useEffect(() => {
@@ -424,12 +457,12 @@ function App() {
       eventSource.close();
       setLiveConnected(false);
     };
-  }, [token, fetchAllData]);
+  }, [token, fetchAllData, API_BASE]);
 
   // Initial load
   useEffect(() => {
     if (token) {
-      fetchAllData();
+      void fetchAllData();
     }
   }, [token, fetchAllData]);
 
@@ -1003,44 +1036,6 @@ function App() {
   // -------------------------------------------------------------
   // 9. UNANIMOUS LANDING PAGE (Clean, Modern SaaS with Theme Toggle & Multi-Language)
   // -------------------------------------------------------------
-  const LanguageSelector = ({ align = 'right' }) => (
-    <div className="relative group">
-      <button
-        type="button"
-        className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all flex items-center gap-1.5 text-xs font-bold shadow-sm"
-        title="Select Language / भाषा चुनें"
-      >
-        <span className="text-base leading-none">{LANGUAGES.find(l => l.code === lang)?.flag || '🇮🇳'}</span>
-        <span className="hidden sm:inline font-bold">{LANGUAGES.find(l => l.code === lang)?.label || 'English (IN)'}</span>
-        <span className="material-symbols-outlined text-xs">expand_more</span>
-      </button>
-      <div className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} top-full mt-1.5 w-52 max-h-80 overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl py-1.5 z-50 hidden group-hover:block transition-all backdrop-blur-md`}>
-        <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900">
-          🇮🇳 Indian Languages
-        </div>
-        {LANGUAGES.map(l => (
-          <button
-            key={l.code}
-            type="button"
-            onClick={() => {
-              setLang(l.code);
-              showToast(`Language: ${l.label}`, 'info');
-            }}
-            className={`w-full px-3 py-2 text-left text-xs font-semibold flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${
-              lang === l.code ? 'text-sky-600 dark:text-sky-400 font-bold bg-sky-50 dark:bg-sky-500/10' : 'text-slate-700 dark:text-slate-300'
-            }`}
-          >
-            <span className="flex items-center gap-2">
-              <span className="text-base leading-none">{l.flag}</span>
-              <span>{l.label}</span>
-            </span>
-            {lang === l.code && <span className="material-symbols-outlined text-sm text-sky-600 dark:text-sky-400">check</span>}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200 selection:bg-sky-500 selection:text-white">
@@ -1067,7 +1062,7 @@ function App() {
             {/* CTAs & Theme Switcher & Language Selector */}
             <div className="flex items-center gap-2.5">
               {/* Language Selector */}
-              <LanguageSelector align="right" />
+              <LanguageSelector lang={lang} setLang={setLang} onSelect={(l) => showToast(`Language: ${l.label}`, 'info')} align="right" />
 
               {/* Theme Toggle Button */}
               <button
@@ -1853,7 +1848,7 @@ function App() {
             </div>
 
             {/* Language Selector Dropdown in Topbar */}
-            <LanguageSelector align="right" />
+            <LanguageSelector lang={lang} setLang={setLang} onSelect={(l) => showToast(`Language: ${l.label}`, 'info')} align="right" />
 
             {/* Theme Switcher Button */}
             <button
