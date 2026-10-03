@@ -20,6 +20,14 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Graceful JSON body parser error handling
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({ error: 'Malformed JSON payload in request body.' });
+  }
+  next(err);
+});
+
 // -------------------------------------------------------------
 // Real-Time Server-Sent Events (SSE) Hub
 // -------------------------------------------------------------
@@ -1198,6 +1206,19 @@ app.get('/api/web-search', async (req, res) => {
     totalFound: matched.length,
     results: matched.length > 0 ? matched : POULTRY_KNOWLEDGE_BASE,
     disclaimer: 'Informational veterinary knowledge for farm reference. For severe outbreaks or regulatory diseases, consult your registered veterinarian immediately.'
+  });
+});
+
+// 404 Handler for Undefined API Routes
+app.use((req, res) => {
+  res.status(404).json({ error: `API route not found: ${req.method} ${req.originalUrl}` });
+});
+
+// Global Error Handler (Always returns JSON)
+app.use((err, req, res, next) => {
+  console.error('[Kukoo Server Error]:', err);
+  res.status(err.status || 500).json({
+    error: err.message || 'Internal Server Error'
   });
 });
 
