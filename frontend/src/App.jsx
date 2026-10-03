@@ -485,14 +485,20 @@ function App() {
     e.preventDefault();
     setAuthLoading(true);
     setAuthError('');
-    setAuthSuccess('');
 
     try {
-      const res = await fetch(`${API_BASE}/api/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(loginForm)
-      });
+      let res;
+      try {
+        res = await fetch(`${API_BASE}/api/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(loginForm)
+        });
+      } catch (netErr) {
+        throw new Error(
+          `Unable to connect to backend (${netErr.message}). If using Render, the free tier may take up to 45s to wake from sleep. If deployed on Vercel, try resetting the API endpoint to Built-In.`
+        );
+      }
 
       const data = await parseJsonResponse(res);
 
@@ -515,7 +521,6 @@ function App() {
     e.preventDefault();
     setAuthLoading(true);
     setAuthError('');
-    setAuthSuccess('');
 
     if (registerForm.password !== registerForm.confirmPassword) {
       setAuthError('Passwords do not match.');
@@ -524,11 +529,18 @@ function App() {
     }
 
     try {
-      const res = await fetch(`${API_BASE}/api/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(registerForm)
-      });
+      let res;
+      try {
+        res = await fetch(`${API_BASE}/api/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(registerForm)
+        });
+      } catch (netErr) {
+        throw new Error(
+          `Unable to connect to backend (${netErr.message}). If using Render, the free tier may take up to 45s to wake from sleep. If deployed on Vercel, try resetting the API endpoint to Built-In.`
+        );
+      }
 
       const data = await parseJsonResponse(res);
 
