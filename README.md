@@ -9,7 +9,7 @@
 
 > **Enterprise-grade, real-time poultry farm operations & intelligence platform tailored for modern commercial and regional poultry farming operations.**
 
-> **🚀 Live Deployment:** [https://kukoo-piyushnagose-4585s-projects.vercel.app/](https://kukoo-piyushnagose-4585s-projects.vercel.app/)
+> **🚀 Live Deployment:** https://kukoo-2026.ai.studio
 
 ---
 
